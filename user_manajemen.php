@@ -121,7 +121,7 @@ $total_user = mysqli_num_rows($query_user);
         <div class="sidebar-header">
             <img src="images/SMK-TELKOM-MEDAN.png" alt="Logo">
             <h3>SARPRAS DIGITAL</h3>
-            <p style="margin:0; font-size:12px; color:#b2bec3;">SUPERADMIN</p>
+            <p style="margin:0; font-size:11px; color:#b2bec3; letter-spacing: 2px;">SUPERADMIN</p>
         </div>
         
         <ul class="sidebar-menu">

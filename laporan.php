@@ -38,10 +38,13 @@ if (!$query_laporan) {
 $total_selesai = mysqli_num_rows($query_laporan);
 
 $total_pendapatan_denda = 0;
-$query_total_denda = mysqli_query($conn, $query_str);
-while($row = mysqli_fetch_assoc($query_total_denda)){
+// Reset pointer agar bisa menghitung total denda
+mysqli_data_seek($query_laporan, 0);
+while($row = mysqli_fetch_assoc($query_laporan)){
     $total_pendapatan_denda += ($row['denda'] + $row['denda_kerusakan']);
 }
+// Balikkan pointer ke awal untuk tabel
+mysqli_data_seek($query_laporan, 0);
 ?>
 
 <!DOCTYPE html>
@@ -77,6 +80,12 @@ while($row = mysqli_fetch_assoc($query_total_denda)){
         .badge-denda { font-size: 11px; padding: 6px 12px; border-radius: 8px; font-weight: bold; display: inline-block; }
         .denda-telat { background: #fff5f5; color: #e74c3c; border: 1px solid #feb2b2; }
         .denda-rusak { background: #fffaf0; color: #d68910; border: 1px solid #fbeec1; }
+        
+        /* Style Tambahan untuk Label Kondisi */
+        .kondisi-label { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+        .text-baik { color: var(--success); }
+        .text-rusak { color: var(--telkom-red); }
+
         @media print {
             .sidebar, .filter-box, .btn, .top-bar, .fa-solid, .fa-regular { display: none !important; }
             .main-content { margin-left: 0 !important; padding: 0 !important; }
@@ -139,6 +148,7 @@ while($row = mysqli_fetch_assoc($query_total_denda)){
                         <th width="30">No</th>
                         <th>Siswa</th>
                         <th>Alat Praktik</th>
+                        <th>Kondisi</th>
                         <th>Waktu Pinjam & Kembali</th>
                         <th>Denda Telat</th>
                         <th>Denda Fisik</th>
@@ -161,12 +171,26 @@ while($row = mysqli_fetch_assoc($query_total_denda)){
                                 <small>Jumlah: <?= $l['jumlah'] ?? 0 ?> Unit</small>
                             </td>
                             <td>
+                                <?php if($l['denda_kerusakan'] > 0): ?>
+                                    <div class="kondisi-label text-rusak">
+                                        <i class="fa-solid fa-circle-xmark"></i> Rusak
+                                    </div>
+                                    <div style="font-size: 10px; color: #666; font-style: italic; margin-top: 4px; line-height: 1.2;">
+                                        Ket: <?= $l['laporan_kerusakan'] ?? '-' ?>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="kondisi-label text-baik">
+                                        <i class="fa-solid fa-circle-check"></i> Baik
+                                    </div>
+                                <?php endif; ?>
+                            </td>
+                            <td>
                                 <span style="font-size: 11px;">
                                     <i class="fa-regular fa-calendar"></i> 
-                                    <?= (!empty($l['tgl_pinjam'])) ? date('d/m/Y', strtotime($l['tgl_pinjam'])) : '-' ?>
+                                    <?= (!empty($l['tgl_pinjam'])) ? date_format(date_create($l['tgl_pinjam']), "d/m/Y") : '-' ?>
                                     <br>
                                     <i class="fa-solid fa-check-circle" style="color: var(--success)"></i> 
-                                    <?= (!empty($l['tgl_kembali'])) ? date('d/m/Y', strtotime($l['tgl_kembali'])) : '-' ?>
+                                    <?= (!empty($l['tgl_kembali'])) ? date_format(date_create($l['tgl_kembali']), "d/m/Y") : '-' ?>
                                 </span>
                             </td>
                             <td>
@@ -190,7 +214,7 @@ while($row = mysqli_fetch_assoc($query_total_denda)){
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="7" align="center" style="padding: 40px; color: #999;">
+                            <td colspan="8" align="center" style="padding: 40px; color: #999;">
                                 <i class="fa-solid fa-box-open fa-2x"></i><br>Data tidak ditemukan.
                             </td>
                         </tr>
