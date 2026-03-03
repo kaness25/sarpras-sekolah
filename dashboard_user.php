@@ -14,7 +14,6 @@ $user_id  = $_SESSION['user_id'];
 // Proses Konfirmasi Bayar
 if (isset($_POST['konfirmasi_bayar'])) {
     $id_peminjaman = mysqli_real_escape_string($conn, $_POST['id_peminjaman']);
-    // Update status ke proses_verifikasi agar muncul tulisan "Menunggu Konfirmasi"
     mysqli_query($conn, "UPDATE peminjaman SET status_pembayaran = 'proses_verifikasi' WHERE id = '$id_peminjaman'");
     header("Location: dashboard_user.php?status=verifying");
     exit();
@@ -77,7 +76,6 @@ $query_saya = mysqli_query($conn, "SELECT p.*, a.nama_alat, a.foto
         .bg-return { background: #e7f5ff; color: #1971c2; }
         .bg-danger { background: #fff5f5; color: #e03131; }
         
-        /* Animasi untuk teks menunggu */
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         .loading-text { animation: pulse 1.5s infinite; color: var(--warning); font-weight: 600; font-size: 12px; display: flex; align-items: center; gap: 5px; justify-content: center; width: 100%; padding: 8px; border: 1px dashed var(--warning); border-radius: 10px; }
 
@@ -129,17 +127,28 @@ $query_saya = mysqli_query($conn, "SELECT p.*, a.nama_alat, a.foto
                 <?php if(mysqli_num_rows($query_saya) > 0): ?>
                     <?php while($s = mysqli_fetch_assoc($query_saya)): 
                         $st = $s['status_transaksi'];
-                        $sp = $s['status_pembayaran']; // Status Pembayaran
+                        $sp = $s['status_pembayaran'];
                         
                         $estimasi_denda = 0;
+                        $hari_telat = 0;
                         $deadline_tampil = "-";
+
+                        // --- PERBAIKAN LOGIKA DENDA DISINI ---
                         if (!empty($s['tgl_pinjam'])) {
-                            $deadline_raw = strtotime($s['tgl_pinjam'] . ' + 3 days');
-                            $deadline_tampil = date('d M Y', $deadline_raw);
-                            $hari_ini = strtotime(date('Y-m-d'));
-                            if ($st == 'disetujui' && $hari_ini > $deadline_raw) {
-                                $selisih = floor(($hari_ini - $deadline_raw) / (60*60*24));
-                                $estimasi_denda = $selisih * 5000;
+                            // Tentukan deadline (3 hari setelah pinjam)
+                            $tgl_pinjam = new DateTime($s['tgl_pinjam']);
+                            $tgl_deadline = clone $tgl_pinjam;
+                            $tgl_deadline->modify('+3 days');
+                            $deadline_tampil = $tgl_deadline->format('d M Y');
+
+                            $tgl_sekarang = new DateTime(date('Y-m-d'));
+
+                            // Jika status masih disetujui (belum balik) dan sudah melewati deadline
+                            if ($st == 'disetujui' && $tgl_sekarang > $tgl_deadline) {
+                                $interval = $tgl_deadline->diff($tgl_sekarang);
+                                // Ditambah 1 agar hari ini dihitung sebagai hari telat (Inklusif)
+                                $hari_telat = $interval->days + 1;
+                                $estimasi_denda = $hari_telat * 5000;
                             }
                         }
                         
@@ -153,7 +162,8 @@ $query_saya = mysqli_query($conn, "SELECT p.*, a.nama_alat, a.foto
                                     <div style="font-size:12px; color:#666;">Jumlah: <?= $s['jumlah'] ?> Unit</div>
                                     <?php if($st == 'disetujui' && !empty($s['tgl_pinjam'])): ?>
                                         <div style="font-size:11px; color:<?= ($estimasi_denda > 0) ? 'red' : '#777' ?>;">
-                                            Batas: <?= $deadline_tampil ?> 
+                                            Batas Kembali: <?= $deadline_tampil ?> 
+                                            <?= ($hari_telat > 0) ? "($hari_telat Hari Terlambat)" : "" ?>
                                         </div>
                                     <?php endif; ?>
                                 </div>

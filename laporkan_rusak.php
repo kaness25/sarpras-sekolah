@@ -9,7 +9,6 @@ $id_p = $_GET['id_p'];
 if (isset($_POST['submit_laporan'])) {
     $kerusakan = mysqli_real_escape_string($conn, $_POST['deskripsi_rusak']);
     
-    // Update status menjadi 'menunggu_kembali' dan simpan laporannya
     $query = "UPDATE peminjaman SET 
               status_transaksi = 'menunggu_kembali', 
               laporan_kerusakan = '$kerusakan' 
@@ -20,7 +19,8 @@ if (isset($_POST['submit_laporan'])) {
     }
 }
 
-$res = mysqli_query($conn, "SELECT p.*, a.nama_alat FROM peminjaman p JOIN alat a ON p.alat_id = a.id WHERE p.id = '$id_p'");
+// Query menggunakan alias 'gambar_alat' untuk kolom 'foto'
+$res = mysqli_query($conn, "SELECT p.*, a.nama_alat, a.foto AS gambar_alat FROM peminjaman p JOIN alat a ON p.alat_id = a.id WHERE p.id = '$id_p'");
 $data = mysqli_fetch_assoc($res);
 ?>
 
@@ -36,7 +36,6 @@ $data = mysqli_fetch_assoc($res);
         :root {
             --telkom-red: #EE2E24;
             --telkom-dark: #2d3436;
-            --warning: #f39c12;
             --bg-light: #f8fafc;
         }
 
@@ -57,30 +56,36 @@ $data = mysqli_fetch_assoc($res);
             box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05); 
             width: 100%;
             max-width: 420px;
-            animation: slideIn 0.5s ease-out;
         }
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .header-icon {
-            width: 60px;
-            height: 60px;
-            background: rgba(238, 46, 36, 0.1);
-            color: var(--telkom-red);
-            border-radius: 16px;
+        /* Container untuk Gambar di bagian Header */
+        .header-image-container {
+            width: 100px;
+            height: 100px;
+            background: rgba(238, 46, 36, 0.05);
+            border-radius: 20px;
+            margin: 0 auto 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            margin: 0 auto 20px;
+            overflow: hidden;
+            border: 2px solid #f1f5f9;
+        }
+
+        .header-image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .header-image-container i {
+            color: var(--telkom-red);
+            font-size: 30px;
         }
 
         h3 { 
             text-align: center; 
-            margin: 0 0 10px 0; 
+            margin: 0 0 20px 0; 
             color: var(--telkom-dark);
             font-weight: 700;
         }
@@ -133,18 +138,10 @@ $data = mysqli_fetch_assoc($res);
             border-radius: 12px; 
             cursor: pointer; 
             font-weight: 600; 
-            font-size: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            transition: 0.3s;
-        }
-
-        .btn-send:hover {
-            background: #d3271d;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(238, 46, 36, 0.2);
         }
 
         .btn-cancel {
@@ -154,18 +151,19 @@ $data = mysqli_fetch_assoc($res);
             color: #94a3b8;
             text-decoration: none;
             font-size: 13px;
-            font-weight: 500;
-            transition: 0.3s;
         }
-
-        .btn-cancel:hover { color: var(--telkom-dark); }
     </style>
 </head>
 <body>
     <div class="box">
-        <div class="header-icon">
-            <i class="fa-solid fa-screwdriver-wrench"></i>
+        <div class="header-image-container">
+            <?php if (!empty($data['gambar_alat'])): ?>
+                <img src="images/<?= $data['gambar_alat'] ?>" alt="Foto Alat">
+            <?php else: ?>
+                <i class="fa-solid fa-screwdriver-wrench"></i>
+            <?php endif; ?>
         </div>
+
         <h3>Lapor Kerusakan</h3>
         
         <div class="info-alat">

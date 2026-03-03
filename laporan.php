@@ -2,8 +2,8 @@
 session_start();
 include 'config.php'; 
 
-// Proteksi Admin
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') { 
+// Proteksi: Admin (Petugas) dan Superadmin boleh masuk
+if (!isset($_SESSION['role']) || ($_SESSION['role'] != 'admin' && $_SESSION['role'] != 'superadmin')) { 
     header("Location: index.php"); 
     exit(); 
 }
@@ -13,13 +13,14 @@ $tgl_awal  = isset($_GET['tgl_awal']) ? $_GET['tgl_awal'] : '';
 $tgl_akhir = isset($_GET['tgl_akhir']) ? $_GET['tgl_akhir'] : '';
 $search    = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
 
-// Query Dasar: Mengambil data yang statusnya 'selesai'
+// Query Dasar
 $query_str = "SELECT p.*, u.username, u.no_induk, a.nama_alat 
               FROM peminjaman p
               JOIN users u ON p.user_id = u.id 
               JOIN alat a ON p.alat_id = a.id 
               WHERE p.status_transaksi = 'selesai'";
 
+// Filter Tanggal
 if ($tgl_awal && $tgl_akhir) {
     $query_str .= " AND (p.tgl_kembali >= '$tgl_awal 00:00:00' AND p.tgl_kembali <= '$tgl_akhir 23:59:59')";
 }
@@ -38,12 +39,9 @@ if (!$query_laporan) {
 $total_selesai = mysqli_num_rows($query_laporan);
 
 $total_pendapatan_denda = 0;
-// Reset pointer agar bisa menghitung total denda
-mysqli_data_seek($query_laporan, 0);
 while($row = mysqli_fetch_assoc($query_laporan)){
     $total_pendapatan_denda += ($row['denda'] + $row['denda_kerusakan']);
 }
-// Balikkan pointer ke awal untuk tabel
 mysqli_data_seek($query_laporan, 0);
 ?>
 
@@ -61,34 +59,42 @@ mysqli_data_seek($query_laporan, 0);
             --telkom-light: #f8f9fa;
             --success: #27ae60;
         }
-        body { background: #f4f7f9; margin: 0; font-family: 'Poppins', sans-serif; }
-        .main-content { padding: 30px; margin-left: 260px; }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        
+        body { background: #f4f7f9; margin: 0; font-family: 'Poppins', sans-serif; display: flex; }
+
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; width: 100%; }
+        .main-content { padding: 30px; width: 100%; }
         .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
         .filter-box { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; margin-bottom: 25px; background: var(--telkom-light); padding: 20px; border-radius: 15px; }
         .filter-group { display: flex; flex-direction: column; gap: 5px; }
         .filter-group label { font-size: 11px; font-weight: 700; color: #636e72; text-transform: uppercase; }
         .filter-group input { padding: 10px; border: 1px solid #ddd; border-radius: 8px; outline: none; background: white; }
+        
         .btn { padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 13px; }
         .btn-filter { background: var(--telkom-red); color: white; }
         .btn-print { background: var(--telkom-dark); color: white; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { padding: 15px; color: #636e72; font-size: 11px; text-transform: uppercase; text-align: left; border-bottom: 2px solid #f1f1f1; }
         td { padding: 15px; border-bottom: 1px solid #f8f9fa; font-size: 13px; color: var(--telkom-dark); vertical-align: middle; }
+        
         .stats-summary { display: flex; gap: 20px; margin-bottom: 30px; }
         .stat-item { background: white; padding: 20px; border-radius: 15px; flex: 1; border-left: 5px solid var(--telkom-red); }
+        .stat-item span { font-size: 12px; color: #636e72; }
+        .stat-item h2 { margin: 5px 0 0; font-size: 20px; }
+
         .badge-denda { font-size: 11px; padding: 6px 12px; border-radius: 8px; font-weight: bold; display: inline-block; }
         .denda-telat { background: #fff5f5; color: #e74c3c; border: 1px solid #feb2b2; }
         .denda-rusak { background: #fffaf0; color: #d68910; border: 1px solid #fbeec1; }
-        
-        /* Style Tambahan untuk Label Kondisi */
         .kondisi-label { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
         .text-baik { color: var(--success); }
         .text-rusak { color: var(--telkom-red); }
 
+        .durasi-tag { font-size: 10px; color: #636e72; font-weight: 600; background: #eee; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; }
+
         @media print {
-            .sidebar, .filter-box, .btn, .top-bar, .fa-solid, .fa-regular { display: none !important; }
-            .main-content { margin-left: 0 !important; padding: 0 !important; }
+            .sidebar, .filter-box, .btn, .top-bar { display: none !important; }
+            .main-content { margin-left: 0 !important; padding: 0 !important; width: 100% !important; }
         }
     </style>
 </head>
@@ -159,6 +165,16 @@ mysqli_data_seek($query_laporan, 0);
                     <?php if(mysqli_num_rows($query_laporan) > 0): $no=1; ?>
                         <?php while($l = mysqli_fetch_assoc($query_laporan)): 
                             $total_baris = $l['denda'] + $l['denda_kerusakan'];
+                            
+                            // --- PERBAIKAN DI SINI ---
+                            // Validasi agar tidak muncul error Deprecated jika tanggal kosong
+                            $durasi_hari = 0;
+                            if (!empty($l['tgl_pinjam']) && !empty($l['tgl_kembali'])) {
+                                $tgl1 = new DateTime($l['tgl_pinjam']);
+                                $tgl2 = new DateTime($l['tgl_kembali']);
+                                $jarak = $tgl1->diff($tgl2);
+                                $durasi_hari = $jarak->days + 1; 
+                            }
                         ?>
                         <tr>
                             <td><?= $no++ ?></td>
@@ -186,11 +202,13 @@ mysqli_data_seek($query_laporan, 0);
                             </td>
                             <td>
                                 <span style="font-size: 11px;">
-                                    <i class="fa-regular fa-calendar"></i> 
-                                    <?= (!empty($l['tgl_pinjam'])) ? date_format(date_create($l['tgl_pinjam']), "d/m/Y") : '-' ?>
+                                    <i class="fa-regular fa-calendar"></i> Pinjam: 
+                                    <b><?= (!empty($l['tgl_pinjam'])) ? date('d/m/Y', strtotime($l['tgl_pinjam'])) : '-' ?></b>
                                     <br>
-                                    <i class="fa-solid fa-check-circle" style="color: var(--success)"></i> 
-                                    <?= (!empty($l['tgl_kembali'])) ? date_format(date_create($l['tgl_kembali']), "d/m/Y") : '-' ?>
+                                    <i class="fa-solid fa-check-circle" style="color: var(--success)"></i> Kembali: 
+                                    <b><?= (!empty($l['tgl_kembali'])) ? date('d/m/Y', strtotime($l['tgl_kembali'])) : '-' ?></b>
+                                    <br>
+                                    <div class="durasi-tag">Durasi: <?= $durasi_hari ?> Hari</div>
                                 </span>
                             </td>
                             <td>

@@ -76,7 +76,7 @@ $role = $_SESSION['role'] ?? ''; // Mengambil role dari session
         </a>
         
         <a href="laporan.php" class="<?= ($current_page == 'laporan.php') ? 'active' : ''; ?>">
-            <i class="fa-solid fa-file-invoice"></i> Laporan
+            <i class="fa-solid fa-file-invoice"></i> Laporan Aktivitas
         </a>
 
         <?php if($role == 'superadmin'): ?>

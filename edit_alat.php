@@ -1,11 +1,28 @@
 <?php 
 session_start();
 include 'config.php'; 
-if ($_SESSION['role'] != 'admin') { header("Location: index.php"); exit(); }
 
-$id = $_GET['id'];
+// Proteksi: Izinkan Admin DAN Superadmin masuk
+if (!isset($_SESSION['role']) || ($_SESSION['role'] != 'admin' && $_SESSION['role'] != 'superadmin')) { 
+    header("Location: index.php"); 
+    exit(); 
+}
+
+// Pastikan ID ada sebelum query
+if (!isset($_GET['id'])) {
+    header("Location: stok_barang.php");
+    exit();
+}
+
+$id = mysqli_real_escape_string($conn, $_GET['id']);
 $query = mysqli_query($conn, "SELECT * FROM alat WHERE id = '$id'");
 $data = mysqli_fetch_assoc($query);
+
+// Jika data tidak ditemukan
+if (!$data) {
+    echo "<script>alert('Data alat tidak ditemukan!'); window.location='stok_barang.php';</script>";
+    exit();
+}
 ?>
 
 <!DOCTYPE html>
@@ -34,7 +51,7 @@ $data = mysqli_fetch_assoc($query);
             min-height: 100vh;
             margin: 0;
             color: var(--text-main);
-            padding: 20px 0;
+            padding: 20px;
         }
 
         .form-card { 
@@ -54,7 +71,6 @@ $data = mysqli_fetch_assoc($query);
 
         .header { text-align: center; margin-bottom: 25px; }
         
-        /* Style Preview Foto */
         .photo-preview-container {
             width: 120px;
             height: 120px;
@@ -63,6 +79,7 @@ $data = mysqli_fetch_assoc($query);
             overflow: hidden;
             border: 3px solid #f1f5f9;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            background: #eee;
         }
         .photo-preview-container img {
             width: 100%;
@@ -82,15 +99,14 @@ $data = mysqli_fetch_assoc($query);
         }
         input:focus { outline: none; border-color: var(--blue-accent); box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1); }
 
-        /* Custom File Input */
         input[type="file"] { padding: 8px; font-size: 12px; border: 2px dashed #e2e8f0; background: #f8fafc; cursor: pointer; }
 
         .btn-update { 
-            background: var(--telkom-dark); color: white; border: none; width: 100%; padding: 14px; 
+            background: var(--telkom-red); color: white; border: none; width: 100%; padding: 14px; 
             border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 15px; transition: all 0.3s;
             display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px;
         }
-        .btn-update:hover { background: #000; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .btn-update:hover { background: #d6251b; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(238, 46, 36, 0.2); }
 
         .cancel-link { display: block; text-align: center; margin-top: 20px; font-size: 13px; color: #94a3b8; text-decoration: none; transition: 0.3s; }
         .cancel-link:hover { color: var(--telkom-red); }
@@ -101,7 +117,7 @@ $data = mysqli_fetch_assoc($query);
 <div class="form-card">
     <div class="header">
         <div class="photo-preview-container">
-            <img src="images/<?= (!empty($data['foto']) && $data['foto'] != '-') ? $data['foto'] : 'default.png' ?>" onerror="this.src='images/default.png'">
+            <img id="preview" src="images/<?= (!empty($data['foto']) && $data['foto'] != '-') ? $data['foto'] : 'default.png' ?>" onerror="this.src='images/default.png'">
         </div>
         <h3>Edit Detail Barang</h3>
         <p class="subtitle">Update informasi dan stok inventaris</p>
@@ -112,16 +128,17 @@ $data = mysqli_fetch_assoc($query);
         
         <div class="input-group">
             <label><i class="fa-solid fa-tag"></i> Nama Alat</label>
-            <input type="text" name="nama_alat" value="<?= $data['nama_alat'] ?>" required>
+            <input type="text" name="nama_alat" value="<?= htmlspecialchars($data['nama_alat']) ?>" required>
         </div>
 
         <div class="input-group">
             <label><i class="fa-solid fa-layer-group"></i> Kategori</label>
             <select name="kategori">
-                <option value="Elektronik" <?= $data['kategori'] == 'Elektronik' ? 'selected' : '' ?>>Elektronik</option>
-                <option value="Olahraga" <?= $data['kategori'] == 'Olahraga' ? 'selected' : '' ?>>Olahraga</option>
-                <option value="Umum" <?= $data['kategori'] == 'Umum' ? 'selected' : '' ?>>Umum</option>
-                <option value="Seni" <?= $data['kategori'] == 'Seni' ? 'selected' : '' ?>>Seni</option>
+                <?php 
+                $kategori_list = ['Elektronik', 'Olahraga', 'Umum', 'Seni'];
+                foreach($kategori_list as $kat): ?>
+                    <option value="<?= $kat ?>" <?= $data['kategori'] == $kat ? 'selected' : '' ?>><?= $kat ?></option>
+                <?php endforeach; ?>
             </select>
         </div>
 
@@ -132,17 +149,27 @@ $data = mysqli_fetch_assoc($query);
 
         <div class="input-group">
             <label><i class="fa-solid fa-image"></i> Ganti Foto Barang</label>
-            <input type="file" name="foto" accept="image/*">
-            <p style="font-size: 10px; color: #94a3b8; margin-top: 5px;">*Biarkan kosong jika tidak ingin mengubah foto</p>
+            <input type="file" name="foto" id="fotoInput" accept="image/*">
+            <p style="font-size: 10px; color: #94a3b8; margin-top: 5px;">*Kosongkan jika tidak ingin mengubah foto</p>
         </div>
 
         <button type="submit" name="update" class="btn-update">
-            <i class="fa-solid fa-check-circle"></i> Simpan Perubahan
+            <i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan
         </button>
         
         <a href="stok_barang.php" class="cancel-link">Batal dan Kembali</a>
     </form>
 </div>
+
+<script>
+    // Script simple untuk live preview foto saat dipilih
+    document.getElementById('fotoInput').onchange = function (evt) {
+        const [file] = this.files
+        if (file) {
+            document.getElementById('preview').src = URL.createObjectURL(file)
+        }
+    }
+</script>
 
 </body>
 </html>
