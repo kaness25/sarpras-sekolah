@@ -86,8 +86,8 @@ if (isset($_POST['update'])) {
         <div class="form-group">
             <label>Role / Level</label>
             <select name="role" required>
-                <option value="user" <?= ($data['role'] == 'user') ? 'selected' : '' ?>>USER (Siswa)</option>
-                <option value="admin" <?= ($data['role'] == 'admin') ? 'selected' : '' ?>>ADMIN (Staff)</option>
+                <option value="peminjam" <?= ($data['role'] == 'peminjam') ? 'selected' : '' ?>>PEMINJAM (Siswa)</option>
+                <option value="petugas" <?= ($data['role'] == 'petugas') ? 'selected' : '' ?>>PETUGAS (Staff)</option>
                 <option value="superadmin" <?= ($data['role'] == 'superadmin') ? 'selected' : '' ?>>SUPERADMIN</option>
             </select>
         </div>

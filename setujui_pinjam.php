@@ -2,8 +2,8 @@
 session_start();
 include 'config.php';
 
-// Proteksi: Pastikan hanya admin yang bisa akses
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') { 
+// Proteksi: Pastikan hanya petugas yang bisa akses (sesuai role kamu)
+if (!isset($_SESSION['role']) || $_SESSION['role'] != 'petugas') { 
     header("Location: index.php"); 
     exit(); 
 }
@@ -23,7 +23,7 @@ if (isset($_GET['id'])) {
         $jumlah_pinjam = $data['jumlah'];
         $stok_saat_ini = $data['stok'];
 
-        // VALIDASI: Cek sekali lagi apakah stok cukup sebelum dipotong
+        // VALIDASI: Cek stok cukup sebelum dipotong
         if ($stok_saat_ini < $jumlah_pinjam) {
             echo "<script>
                     alert('Gagal! Stok " . $data['nama_alat'] . " tidak cukup untuk disetujui.');
@@ -32,34 +32,33 @@ if (isset($_GET['id'])) {
             exit();
         }
 
-        // --- PERBAIKAN DI SINI ---
+        // Tentukan tanggal pinjam (sekarang) dan deadline (misal 3 hari ke depan)
         $tgl_pinjam = date('Y-m-d H:i:s'); 
-        // Menentukan deadline otomatis, misal 3 hari dari sekarang agar tgl_kembali tidak kosong
         $tgl_kembali = date('Y-m-d H:i:s', strtotime('+3 days')); 
 
-        // Mulai Transaksi Database
+        // Mulai Transaksi Database untuk keamanan data
         mysqli_begin_transaction($conn);
 
         try {
-            // 2. Update status transaksi menjadi 'disetujui', isi tgl_pinjam DAN tgl_kembali
+            // 2. Update status transaksi menjadi 'disetujui'
             $update_transaksi = mysqli_query($conn, "UPDATE peminjaman SET 
                                 status_transaksi = 'disetujui', 
                                 tgl_pinjam = '$tgl_pinjam',
                                 tgl_kembali = '$tgl_kembali' 
                                 WHERE id = '$id_pinjam'");
 
-            // 3. Potong stok alat
+            // 3. Potong stok alat di tabel 'alat'
             $update_stok = mysqli_query($conn, "UPDATE alat SET stok = stok - $jumlah_pinjam WHERE id = '$id_alat'");
 
-            // 4. Update status alat jika stok menjadi 0
+            // 4. Update status alat menjadi 'dipinjam' jika stok habis (Sesuai enum di gambar database)
             mysqli_query($conn, "UPDATE alat SET status = 'dipinjam' WHERE id = '$id_alat' AND stok <= 0");
 
             if ($update_transaksi && $update_stok) {
                 mysqli_commit($conn);
-                header("Location: dashboard_admin.php?status=disetujui");
+                header("Location: dashboard_admin.php?pesan=berhasil_setuju");
                 exit();
             } else {
-                throw new Exception("Query gagal dieksekusi.");
+                throw new Exception("Gagal memperbarui data.");
             }
 
         } catch (Exception $e) {

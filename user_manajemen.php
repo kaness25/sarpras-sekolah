@@ -63,7 +63,7 @@ $total_user = mysqli_num_rows($query_user);
         
         .role-badge { padding: 5px 12px; border-radius: 8px; font-size: 10px; font-weight: 800; display: inline-block; letter-spacing: 0.5px; }
         .badge-super { background: #6c5ce7; color: white; }
-        .badge-admin { background: #fab1a0; color: #d63031; }
+        .badge-admin { background: #fab1a0; color: #d63031; } /* Warna Merah */
         .badge-user { background: #e8f8f5; color: #1abc9c; }
 
         .action-group { display: flex; gap: 10px; }
@@ -115,8 +115,13 @@ $total_user = mysqli_num_rows($query_user);
                                 <?php 
                                     $role = strtolower($u['role']);
                                     $class = "badge-user";
-                                    if($role == 'superadmin') $class = "badge-super";
-                                    if($role == 'admin') $class = "badge-admin";
+                                    
+                                    if($role == 'superadmin') {
+                                        $class = "badge-super";
+                                    } elseif($role == 'admin' || $role == 'petugas') { 
+                                        // Level PETUGAS sekarang menggunakan class warna merah (badge-admin)
+                                        $class = "badge-admin"; 
+                                    }
                                 ?>
                                 <span class="role-badge <?= $class ?>"><?= strtoupper($u['role']) ?></span>
                             </td>

@@ -6,9 +6,12 @@ include 'config.php';
 if (isset($_SESSION['role'])) {
     if ($_SESSION['role'] == 'superadmin') {
         header("Location: dashboard_superadmin.php");
-    } elseif ($_SESSION['role'] == 'admin') {
+    } 
+    // PERBAIKAN: Petugas diarahkan ke dashboard admin
+    elseif ($_SESSION['role'] == 'admin' || $_SESSION['role'] == 'petugas') {
         header("Location: dashboard_admin.php");
-    } else {
+    } 
+    else {
         header("Location: dashboard_user.php");
     } 
     exit();
@@ -30,12 +33,15 @@ if (isset($_POST['login'])) {
         $_SESSION['username'] = $data['username'];
         $_SESSION['role']     = $data['role'];
 
-        // REDIRECT BERDASARKAN ROLE (Ditambah kondisi superadmin)
+        // REDIRECT BERDASARKAN ROLE
         if ($data['role'] == 'superadmin') {
             header("Location: dashboard_superadmin.php");
-        } elseif ($data['role'] == 'admin') {
+        } 
+        // PERBAIKAN: Petugas diarahkan ke dashboard admin
+        elseif ($data['role'] == 'admin' || $data['role'] == 'petugas') {
             header("Location: dashboard_admin.php");
-        } else {
+        } 
+        else {
             header("Location: dashboard_user.php");
         }
         exit();

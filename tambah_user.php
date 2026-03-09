@@ -150,8 +150,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         <label><i class="fa-solid fa-users-gear"></i> Status Akses Akun</label>
         <select name="role" required>
-            <option value="peminjam">Siswa (Peminjam)</option>
-            <option value="admin">Guru (Admin Sarpras)</option>
+            <option value="peminjam">Peminjam (Siswa)</option>
+            <option value="petugas">Petugas (Staff)</option>
             <option value="superadmin">Superadmin</option>
         </select>
 

@@ -2,8 +2,8 @@
 session_start();
 include 'config.php'; 
 
-// Proteksi Halaman - Pastikan hanya Admin/Petugas yang masuk
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+// PERBAIKAN PROTEKSI HALAMAN: Izinkan role 'admin' DAN 'petugas'
+if (!isset($_SESSION['role']) || ($_SESSION['role'] != 'admin' && $_SESSION['role'] != 'petugas')) {
     header("Location: index.php");
     exit();
 }
@@ -16,7 +16,7 @@ $query_pinjam = mysqli_query($conn, "SELECT p.*, u.username, u.no_induk, a.nama_
     WHERE p.status_transaksi = 'proses' 
     ORDER BY p.id DESC");
 
-// 2. Monitoring Peminjaman Aktif (Sedang Dipakai) - Pastikan tgl_kembali ikut terpanggil
+// 2. Monitoring Peminjaman Aktif (Sedang Dipakai)
 $query_aktif = mysqli_query($conn, "SELECT p.*, u.username, a.nama_alat 
     FROM peminjaman p 
     JOIN users u ON p.user_id = u.id 
@@ -44,6 +44,9 @@ $query_bayar = mysqli_query($conn, "SELECT p.*, u.username, a.nama_alat
 $count_pinjam = mysqli_num_rows($query_pinjam);
 $count_aktif = mysqli_num_rows($query_aktif);
 $count_verif = mysqli_num_rows($query_konfirmasi_kembali);
+
+// Ambil sapaan berdasarkan Role
+$display_role = ($_SESSION['role'] == 'petugas') ? 'Petugas' : 'Admin';
 ?>
 
 <!DOCTYPE html>
@@ -51,7 +54,7 @@ $count_verif = mysqli_num_rows($query_konfirmasi_kembali);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Petugas | Sarpras Digital</title>
+    <title>Dashboard <?= $display_role ?> | Sarpras Digital</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -69,14 +72,12 @@ $count_verif = mysqli_num_rows($query_konfirmasi_kembali);
         body { font-family: 'Poppins', sans-serif; background: var(--bg-light); margin: 0; color: var(--telkom-dark); }
         .main-content { margin-left: 260px; padding: 40px; transition: 0.3s; }
         
-        /* Statistik Cards */
         .stats-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .stat-box { background: white; padding: 20px; border-radius: 15px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-bottom: 4px solid #ddd; }
         .stat-box i { font-size: 25px; padding: 15px; border-radius: 12px; }
         .stat-info h4 { margin: 0; font-size: 13px; color: #888; }
         .stat-info h2 { margin: 0; font-size: 22px; }
 
-        /* Card & Table Styling */
         .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); margin-bottom: 30px; border: none; overflow: hidden; }
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .card-header h3 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px; }
@@ -85,7 +86,6 @@ $count_verif = mysqli_num_rows($query_konfirmasi_kembali);
         th { text-align: left; padding: 15px; background: #fdfdfd; font-size: 12px; color: #a0aec0; text-transform: uppercase; border-bottom: 1px solid #eee; }
         td { padding: 18px 15px; border-bottom: 1px solid #f8f9fa; font-size: 14px; }
 
-        /* Action Buttons */
         .btn-group { display: flex; gap: 8px; }
         .btn-action { text-decoration: none; font-size: 11px; font-weight: 600; padding: 8px 14px; border-radius: 10px; color: white; transition: 0.3s; display: inline-flex; align-items: center; gap: 6px; border: none; cursor: pointer; }
         .btn-action:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
@@ -122,7 +122,7 @@ $count_verif = mysqli_num_rows($query_konfirmasi_kembali);
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
             <div>
-                <h1 style="margin:0; font-weight: 700;">Halo, Petugas</h1>
+                <h1 style="margin:0; font-weight: 700;">Halo, <?= $display_role ?></h1>
                 <p style="color: #718096; margin-top: 5px;">Kelola alur peminjaman prasarana sekolah secara real-time.</p>
             </div>
             <div style="text-align: right;">
@@ -184,17 +184,15 @@ $count_verif = mysqli_num_rows($query_konfirmasi_kembali);
                 </thead>
                 <tbody>
                     <?php if($count_aktif > 0): while($a = mysqli_fetch_assoc($query_aktif)): 
-                        // --- LOGIKA HITUNG DENDA TELAT ---
-                        $tgl_deadline = strtotime($a['tgl_kembali']); // Menggunakan tgl_kembali dari database sebagai deadline
+                        $tgl_deadline = strtotime($a['tgl_kembali']); 
                         $now = time();
-                        
                         $hari_telat = 0;
                         $denda_berjalan = 0;
 
                         if ($now > $tgl_deadline) {
                             $selisih = $now - $tgl_deadline;
                             $hari_telat = floor($selisih / (60 * 60 * 24));
-                            $denda_berjalan = $hari_telat * 5000; // Tarif 5rb/hari
+                            $denda_berjalan = $hari_telat * 5000; 
                         }
                     ?>
                     <tr>
@@ -208,7 +206,7 @@ $count_verif = mysqli_num_rows($query_konfirmasi_kembali);
                                 </span>
                             <?php else: ?>
                                 <span style="color:var(--success); font-size:12px;">
-                                    <i class="fa-solid fa-circle-check"></i> Aman (Sisa hari sesuai deadline)
+                                    <i class="fa-solid fa-circle-check"></i> Aman (Sesuai deadline)
                                 </span>
                             <?php endif; ?>
                         </td>
@@ -270,14 +268,12 @@ $count_verif = mysqli_num_rows($query_konfirmasi_kembali);
     </div>
 
     <script>
-        // Update Jam Realtime
         function updateClock() {
             const now = new Date();
             document.getElementById('clock').innerText = now.toLocaleTimeString('id-ID') + " WIB";
         }
         setInterval(updateClock, 1000);
 
-        // Auto hide notification
         setTimeout(() => {
             const alert = document.querySelector('.alert-notif');
             if(alert) {

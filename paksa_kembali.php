@@ -3,7 +3,7 @@ session_start();
 include 'config.php';
 
 // Pastikan hanya admin yang bisa akses
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+if (!isset($_SESSION['role']) || $_SESSION['role'] != 'petugas') {
     header("Location: index.php");
     exit();
 }

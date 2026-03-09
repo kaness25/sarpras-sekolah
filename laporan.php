@@ -3,7 +3,7 @@ session_start();
 include 'config.php'; 
 
 // Proteksi: Admin (Petugas) dan Superadmin boleh masuk
-if (!isset($_SESSION['role']) || ($_SESSION['role'] != 'admin' && $_SESSION['role'] != 'superadmin')) { 
+if (!isset($_SESSION['role']) || ($_SESSION['role'] != 'petugas' && $_SESSION['role'] != 'superadmin')) { 
     header("Location: index.php"); 
     exit(); 
 }

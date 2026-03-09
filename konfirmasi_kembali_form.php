@@ -3,7 +3,7 @@ session_start();
 include 'config.php';
 
 // Proteksi Admin
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+if (!isset($_SESSION['role']) || $_SESSION['role'] != 'petugas') {
     header("Location: index.php");
     exit();
 }
