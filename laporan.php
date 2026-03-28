@@ -166,8 +166,6 @@ mysqli_data_seek($query_laporan, 0);
                         <?php while($l = mysqli_fetch_assoc($query_laporan)): 
                             $total_baris = $l['denda'] + $l['denda_kerusakan'];
                             
-                            // --- PERBAIKAN DI SINI ---
-                            // Validasi agar tidak muncul error Deprecated jika tanggal kosong
                             $durasi_hari = 0;
                             if (!empty($l['tgl_pinjam']) && !empty($l['tgl_kembali'])) {
                                 $tgl1 = new DateTime($l['tgl_pinjam']);
@@ -209,6 +207,14 @@ mysqli_data_seek($query_laporan, 0);
                                     <b><?= (!empty($l['tgl_kembali'])) ? date('d/m/Y', strtotime($l['tgl_kembali'])) : '-' ?></b>
                                     <br>
                                     <div class="durasi-tag">Durasi: <?= $durasi_hari ?> Hari</div>
+
+                                    <?php if($l['denda'] > 0): 
+                                        $hari_telat = ceil($l['denda'] / 5000); 
+                                    ?>
+                                        <div style="font-size: 10px; color: var(--telkom-red); font-weight: 700; margin-top: 2px;">
+                                            <i class="fa-solid fa-clock"></i> Telat: <?= $hari_telat ?> Hari
+                                        </div>
+                                    <?php endif; ?>
                                 </span>
                             </td>
                             <td>

@@ -24,10 +24,11 @@ if ($data) {
     $jumlah_pinjam = $data['jumlah']; 
 
     // --- LOGIKA MENANGKAP DENDA ---
-    $denda = isset($_GET['denda']) ? mysqli_real_escape_string($conn, $_GET['denda']) : 0;
+    // Mengambil nilai denda dari URL (dikirim dari dashboard_user.php)
+    $denda = isset($_GET['denda']) ? (int)$_GET['denda'] : 0;
 
-    // 2. Update status transaksi & CATAT TANGGAL KEMBALI SEKARANG
-    // Penambahan tgl_kembali = NOW() memastikan tanggal muncul di laporan
+    // 2. Update status transaksi & CATAT TANGGAL KEMBALI ASLI (HARI INI)
+    // tgl_kembali diupdate menjadi NOW() agar di laporan muncul tanggal hari ini
     $query_transaksi = "UPDATE peminjaman SET 
                         status_transaksi = 'menunggu_kembali', 
                         denda = '$denda',

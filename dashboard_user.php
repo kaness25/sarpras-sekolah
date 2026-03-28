@@ -133,26 +133,23 @@ $query_saya = mysqli_query($conn, "SELECT p.*, a.nama_alat, a.foto
                         $hari_telat = 0;
                         $deadline_tampil = "-";
 
-                        // --- PERBAIKAN LOGIKA DENDA DISINI ---
-                        if (!empty($s['tgl_pinjam'])) {
-                            // Tentukan deadline (3 hari setelah pinjam)
-                            $tgl_pinjam = new DateTime($s['tgl_pinjam']);
-                            $tgl_deadline = clone $tgl_pinjam;
-                            $tgl_deadline->modify('+3 days');
-                            $deadline_tampil = $tgl_deadline->format('d M Y');
+                        // --- LOGIKA DENDA DISINKRONKAN DENGAN ADMIN (TIMESTAMP METHOD) ---
+                        if (!empty($s['tgl_kembali'])) {
+                            $tgl_deadline_timestamp = strtotime($s['tgl_kembali']); 
+                            $deadline_tampil = date('d M Y', $tgl_deadline_timestamp);
+                            $now = time();
 
-                            $tgl_sekarang = new DateTime(date('Y-m-d'));
-
-                            // Jika status masih disetujui (belum balik) dan sudah melewati deadline
-                            if ($st == 'disetujui' && $tgl_sekarang > $tgl_deadline) {
-                                $interval = $tgl_deadline->diff($tgl_sekarang);
-                                // Ditambah 1 agar hari ini dihitung sebagai hari telat (Inklusif)
-                                $hari_telat = $interval->days + 1;
-                                $estimasi_denda = $hari_telat * 5000;
+                            // Jika sedang dipinjam (disetujui) dan sudah lewat jam deadline
+                            if ($st == 'disetujui' && $now > $tgl_deadline_timestamp) {
+                                $selisih = $now - $tgl_deadline_timestamp;
+                                $hari_telat = floor($selisih / (60 * 60 * 24));
+                                $estimasi_denda = $hari_telat * 5000; 
                             }
                         }
                         
-                        $denda_final = ($st == 'disetujui') ? $estimasi_denda : ($s['denda'] + $s['denda_kerusakan']);
+                        // Denda final: pakai estimasi denda telat jika sedang dipinjam, 
+                        // atau pakai data denda di DB jika sudah diproses kembali
+                        $denda_final = ($st == 'disetujui') ? $estimasi_denda : (($s['denda'] ?? 0) + ($s['denda_kerusakan'] ?? 0));
                     ?>
                         <div class="item-row" style="flex-direction: column; align-items: stretch; border-left: 5px solid <?= ($denda_final > 0) ? 'var(--danger)' : '#eee' ?>;">
                             <div style="display: flex; gap: 15px;">
@@ -160,10 +157,10 @@ $query_saya = mysqli_query($conn, "SELECT p.*, a.nama_alat, a.foto
                                 <div style="flex:1;">
                                     <strong><?= $s['nama_alat'] ?></strong>
                                     <div style="font-size:12px; color:#666;">Jumlah: <?= $s['jumlah'] ?> Unit</div>
-                                    <?php if($st == 'disetujui' && !empty($s['tgl_pinjam'])): ?>
-                                        <div style="font-size:11px; color:<?= ($estimasi_denda > 0) ? 'red' : '#777' ?>;">
+                                    <?php if(!empty($s['tgl_kembali'])): ?>
+                                        <div style="font-size:11px; color:<?= ($hari_telat > 0 && $st == 'disetujui') ? 'red' : '#777' ?>;">
                                             Batas Kembali: <?= $deadline_tampil ?> 
-                                            <?= ($hari_telat > 0) ? "($hari_telat Hari Terlambat)" : "" ?>
+                                            <?= ($hari_telat > 0 && $st == 'disetujui') ? "($hari_telat Hari Terlambat)" : "" ?>
                                         </div>
                                     <?php endif; ?>
                                 </div>
