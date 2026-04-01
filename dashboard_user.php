@@ -133,13 +133,11 @@ $query_saya = mysqli_query($conn, "SELECT p.*, a.nama_alat, a.foto
                         $hari_telat = 0;
                         $deadline_tampil = "-";
 
-                        // --- LOGIKA DENDA DISINKRONKAN DENGAN ADMIN (TIMESTAMP METHOD) ---
                         if (!empty($s['tgl_kembali'])) {
                             $tgl_deadline_timestamp = strtotime($s['tgl_kembali']); 
                             $deadline_tampil = date('d M Y', $tgl_deadline_timestamp);
                             $now = time();
 
-                            // Jika sedang dipinjam (disetujui) dan sudah lewat jam deadline
                             if ($st == 'disetujui' && $now > $tgl_deadline_timestamp) {
                                 $selisih = $now - $tgl_deadline_timestamp;
                                 $hari_telat = floor($selisih / (60 * 60 * 24));
@@ -147,8 +145,6 @@ $query_saya = mysqli_query($conn, "SELECT p.*, a.nama_alat, a.foto
                             }
                         }
                         
-                        // Denda final: pakai estimasi denda telat jika sedang dipinjam, 
-                        // atau pakai data denda di DB jika sudah diproses kembali
                         $denda_final = ($st == 'disetujui') ? $estimasi_denda : (($s['denda'] ?? 0) + ($s['denda_kerusakan'] ?? 0));
                     ?>
                         <div class="item-row" style="flex-direction: column; align-items: stretch; border-left: 5px solid <?= ($denda_final > 0) ? 'var(--danger)' : '#eee' ?>;">
@@ -170,7 +166,13 @@ $query_saya = mysqli_query($conn, "SELECT p.*, a.nama_alat, a.foto
                                         elseif($st == 'disetujui') echo '<span class="badge bg-success">Dipinjam</span>';
                                         elseif($st == 'menunggu_kembali') echo '<span class="badge bg-return">Verifikasi...</span>';
                                         elseif($st == 'ditolak') echo '<span class="badge bg-danger">Ditolak</span>';
-                                        elseif($st == 'selesai') echo '<span class="badge bg-success">Selesai</span>';
+                                        elseif($st == 'selesai') {
+                                            if ($sp != 'lunas' && $denda_final > 0) {
+                                                echo '<span class="badge" style="background: #fff5f5; color: var(--danger); border: 1px solid var(--danger);">Menunggu Pembayaran</span>';
+                                            } else {
+                                                echo '<span class="badge bg-success">Selesai</span>';
+                                            }
+                                        }
                                     ?>
                                 </div>
                             </div>
